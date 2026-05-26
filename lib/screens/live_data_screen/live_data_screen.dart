@@ -41,6 +41,7 @@ class LiveDataScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
+         backgroundColor: Colors.white,
         title: const Text(
           'Live Data',
           style: TextStyle(fontWeight: FontWeight.bold),

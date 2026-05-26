@@ -1,7 +1,6 @@
 import 'package:ble_vitals_scanner/screens/live_data_screen/live_data_screen.dart';
 import 'package:flutter/material.dart';
 
-
 class DeviceDetailsScreen extends StatelessWidget {
   final String deviceName;
   final String deviceId;
@@ -16,14 +15,12 @@ class DeviceDetailsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.white,
         title: const Text(
           'Device Details',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        actions: const [
-          Icon(Icons.more_vert),
-          SizedBox(width: 8),
-        ],
+        actions: const [Icon(Icons.more_vert), SizedBox(width: 8)],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -112,10 +109,7 @@ class DeviceDetailsScreen extends StatelessWidget {
 class InfoCard extends StatelessWidget {
   final Widget child;
 
-  const InfoCard({
-    super.key,
-    required this.child,
-  });
+  const InfoCard({super.key, required this.child});
 
   @override
   Widget build(BuildContext context) {
@@ -126,10 +120,7 @@ class InfoCard extends StatelessWidget {
         side: BorderSide(color: Colors.grey.shade300),
         borderRadius: BorderRadius.circular(10),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: child,
-      ),
+      child: Padding(padding: const EdgeInsets.all(16), child: child),
     );
   }
 }
@@ -137,10 +128,7 @@ class InfoCard extends StatelessWidget {
 class SectionTitle extends StatelessWidget {
   final String title;
 
-  const SectionTitle({
-    super.key,
-    required this.title,
-  });
+  const SectionTitle({super.key, required this.title});
 
   @override
   Widget build(BuildContext context) {
@@ -148,10 +136,7 @@ class SectionTitle extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 10),
       child: Text(
         title,
-        style: const TextStyle(
-          fontSize: 17,
-          fontWeight: FontWeight.bold,
-        ),
+        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -161,11 +146,7 @@ class ServiceTile extends StatelessWidget {
   final String title;
   final String uuid;
 
-  const ServiceTile({
-    super.key,
-    required this.title,
-    required this.uuid,
-  });
+  const ServiceTile({super.key, required this.title, required this.uuid});
 
   @override
   Widget build(BuildContext context) {
@@ -177,14 +158,8 @@ class ServiceTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
       ),
       child: ListTile(
-        title: Text(
-          title,
-          style: const TextStyle(fontWeight: FontWeight.w600),
-        ),
-        subtitle: Text(
-          'UUID: $uuid',
-          style: const TextStyle(fontSize: 12),
-        ),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+        subtitle: Text('UUID: $uuid', style: const TextStyle(fontSize: 12)),
         trailing: const Icon(Icons.chevron_right),
       ),
     );
@@ -229,10 +204,7 @@ class CharacteristicTile extends StatelessWidget {
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 6),
-                  Text(
-                    'UUID: $uuid',
-                    style: const TextStyle(fontSize: 11),
-                  ),
+                  Text('UUID: $uuid', style: const TextStyle(fontSize: 11)),
                   const SizedBox(height: 4),
                   Text(
                     'Properties: $properties',
@@ -241,10 +213,7 @@ class CharacteristicTile extends StatelessWidget {
                 ],
               ),
             ),
-            OutlinedButton(
-              onPressed: onPressed,
-              child: Text(buttonText),
-            ),
+            OutlinedButton(onPressed: onPressed, child: Text(buttonText)),
           ],
         ),
       ),

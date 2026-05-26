@@ -7,33 +7,19 @@ class ScanScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final devices = [
-      {
-        'name': 'Pulse Oximeter',
-        'id': 'A4:C1:38:7B:2D:11',
-        'rssi': '-48 dBm',
-      },
-      {
-        'name': 'Heart Sensor',
-        'id': 'F7:9E:8B:3A:64:2C',
-        'rssi': '-56 dBm',
-      },
-      {
-        'name': 'Unknown Device',
-        'id': '7C:5D:90:1F:2A:9B',
-        'rssi': '-72 dBm',
-      },
+      {'name': 'Pulse Oximeter', 'id': 'A4:C1:38:7B:2D:11', 'rssi': '-48 dBm'},
+      {'name': 'Heart Sensor', 'id': 'F7:9E:8B:3A:64:2C', 'rssi': '-56 dBm'},
+      {'name': 'Unknown Device', 'id': '7C:5D:90:1F:2A:9B', 'rssi': '-72 dBm'},
     ];
 
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.white,
         title: const Text(
           'BLE Scanner',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        actions: const [
-          Icon(Icons.more_vert),
-          SizedBox(width: 8),
-        ],
+        actions: const [Icon(Icons.more_vert), SizedBox(width: 8)],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -43,10 +29,7 @@ class ScanScreen extends StatelessWidget {
             const Text.rich(
               TextSpan(
                 text: 'Bluetooth: ',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 children: [
                   TextSpan(
                     text: 'ON',
@@ -71,19 +54,13 @@ class ScanScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                child: const Text(
-                  'Start Scan',
-                  style: TextStyle(fontSize: 16),
-                ),
+                child: const Text('Start Scan', style: TextStyle(fontSize: 16)),
               ),
             ),
             const SizedBox(height: 28),
             const Text(
               'Nearby Devices',
-              style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
             Expanded(
@@ -164,10 +141,7 @@ class DeviceCard extends StatelessWidget {
                 ],
               ),
             ),
-            OutlinedButton(
-              onPressed: onConnect,
-              child: const Text('Connect'),
-            ),
+            OutlinedButton(onPressed: onConnect, child: const Text('Connect')),
           ],
         ),
       ),
