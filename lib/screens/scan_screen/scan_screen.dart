@@ -1,25 +1,29 @@
+import 'package:ble_vitals_scanner/features/ble/provider/ble_provider.dart';
 import 'package:ble_vitals_scanner/screens/device_details_screen/device_details_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
+import 'package:provider/provider.dart';
 
 class ScanScreen extends StatelessWidget {
   const ScanScreen({super.key});
 
+  String _deviceName(DiscoveredDevice device) {
+    if (device.name.trim().isEmpty) {
+      return 'Unknown Device';
+    }
+    return device.name;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final devices = [
-      {'name': 'Pulse Oximeter', 'id': 'A4:C1:38:7B:2D:11', 'rssi': '-48 dBm'},
-      {'name': 'Heart Sensor', 'id': 'F7:9E:8B:3A:64:2C', 'rssi': '-56 dBm'},
-      {'name': 'Unknown Device', 'id': '7C:5D:90:1F:2A:9B', 'rssi': '-72 dBm'},
-    ];
+    final bleProvider = context.watch<BleProvider>();
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.white,
         title: const Text(
           'BLE Scanner',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        actions: const [Icon(Icons.more_vert), SizedBox(width: 8)],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -41,53 +45,97 @@ class ScanScreen extends StatelessWidget {
                 ],
               ),
             ),
+
             const SizedBox(height: 20),
+
             SizedBox(
               width: double.infinity,
               height: 48,
               child: ElevatedButton(
-                onPressed: () {},
+                onPressed: bleProvider.isScanning
+                    ? bleProvider.stopScan
+                    : bleProvider.startScan,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
+                  backgroundColor: bleProvider.isScanning
+                      ? Colors.red
+                      : Colors.blue,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
                 ),
-                child: const Text('Start Scan', style: TextStyle(fontSize: 16)),
+                child: Text(
+                  bleProvider.isScanning ? 'Stop Scan' : 'Start Scan',
+                ),
               ),
             ),
-            const SizedBox(height: 28),
-            const Text(
-              'Nearby Devices',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            Expanded(
-              child: ListView.separated(
-                itemCount: devices.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  final device = devices[index];
 
-                  return DeviceCard(
-                    name: device['name']!,
-                    id: device['id']!,
-                    rssi: device['rssi']!,
-                    onConnect: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => DeviceDetailsScreen(
-                            deviceName: device['name']!,
-                            deviceId: device['id']!,
-                          ),
-                        ),
-                      );
-                    },
-                  );
-                },
+            if (bleProvider.errorMessage != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                bleProvider.errorMessage!,
+                style: const TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
+            ],
+
+            const SizedBox(height: 28),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Nearby Devices',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                ),
+                if (bleProvider.isScanning)
+                  const SizedBox(
+                    height: 18,
+                    width: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            Expanded(
+              child: bleProvider.devices.isEmpty
+                  ? Center(
+                      child: Text(
+                        bleProvider.isScanning
+                            ? 'Scanning for BLE devices...'
+                            : 'Press Start Scan to discover devices',
+                        textAlign: TextAlign.center,
+                      ),
+                    )
+                  : ListView.separated(
+                      itemCount: bleProvider.devices.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        final device = bleProvider.devices[index];
+
+                        return DeviceCard(
+                          name: _deviceName(device),
+                          id: device.id,
+                          rssi: '${device.rssi} dBm',
+                          onConnect: () async {
+                            await bleProvider.stopScan();
+
+                            if (!context.mounted) return;
+
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => DeviceDetailsScreen(
+                                  deviceName: _deviceName(device),
+                                  deviceId: device.id,
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
             ),
           ],
         ),
@@ -135,7 +183,7 @@ class DeviceCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Text(id),
+                  Text(id, style: const TextStyle(fontSize: 13)),
                   const SizedBox(height: 6),
                   Text('RSSI: $rssi'),
                 ],
