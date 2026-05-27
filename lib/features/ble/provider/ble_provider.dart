@@ -9,10 +9,6 @@ import '../data/ble_repository.dart';
 class BleProvider extends ChangeNotifier {
   final BleRepository _bleRepository;
   final BlePermissionService _permissionService;
-  StreamSubscription<ConnectionStateUpdate>? _connectionSubscription;
-
-  ConnectionStateUpdate? connectionState;
-  String? connectedDeviceId;
 
   BleProvider({
     required BleRepository bleRepository,
@@ -21,12 +17,21 @@ class BleProvider extends ChangeNotifier {
        _permissionService = permissionService;
 
   StreamSubscription<DiscoveredDevice>? _scanSubscription;
+  StreamSubscription<ConnectionStateUpdate>? _connectionSubscription;
 
   final List<DiscoveredDevice> _devices = [];
 
   List<DiscoveredDevice> get devices => _devices;
 
+  ConnectionStateUpdate? connectionState;
+  String? connectedDeviceId;
+
+  List<DiscoveredService> services = [];
+
   bool isScanning = false;
+  bool isConnecting = false;
+  bool isDiscoveringServices = false;
+
   String? errorMessage;
 
   Future<void> startScan() async {
@@ -44,7 +49,7 @@ class BleProvider extends ChangeNotifier {
     isScanning = true;
     notifyListeners();
 
-    _scanSubscription?.cancel();
+    await _scanSubscription?.cancel();
 
     _scanSubscription = _bleRepository.scanForDevices().listen(
       (device) {
@@ -76,32 +81,103 @@ class BleProvider extends ChangeNotifier {
   Future<void> connectToDevice(String deviceId) async {
     errorMessage = null;
     connectedDeviceId = deviceId;
+    services.clear();
+    connectionState = null;
+    isConnecting = true;
+    isDiscoveringServices = false;
+    notifyListeners();
 
     await _connectionSubscription?.cancel();
 
     _connectionSubscription = _bleRepository
         .connectToDevice(deviceId)
         .listen(
-          (update) {
+          (update) async {
             connectionState = update;
+
+            debugPrint('BLE connection update: ${update.connectionState}');
+
+            if (update.connectionState == DeviceConnectionState.connecting) {
+              isConnecting = true;
+            }
+
+            if (update.connectionState == DeviceConnectionState.connected) {
+              isConnecting = false;
+              errorMessage = null;
+              notifyListeners();
+
+              await discoverServices(deviceId);
+              return;
+            }
+
+            if (update.connectionState == DeviceConnectionState.disconnected) {
+              isConnecting = false;
+              isDiscoveringServices = false;
+              services.clear();
+
+              if (connectedDeviceId == deviceId) {
+                errorMessage ??= 'Device disconnected';
+              }
+            }
+
             notifyListeners();
           },
           onError: (error) {
+            debugPrint('BLE connection error: $error');
+
+            isConnecting = false;
+            isDiscoveringServices = false;
+            services.clear();
+            connectedDeviceId = null;
+            connectionState = null;
             errorMessage = 'Connection failed: $error';
+
             notifyListeners();
           },
+          cancelOnError: true,
         );
+  }
+
+  Future<void> discoverServices(String deviceId) async {
+    try {
+      isDiscoveringServices = true;
+      errorMessage = null;
+      notifyListeners();
+
+      services = await _bleRepository.discoverServices(deviceId);
+
+      debugPrint('Discovered services count: ${services.length}');
+
+      isDiscoveringServices = false;
+      notifyListeners();
+    } catch (error) {
+      debugPrint('Discover services error: $error');
+
+      isDiscoveringServices = false;
+      services.clear();
+      errorMessage = 'Discover services failed: $error';
+
+      notifyListeners();
+    }
   }
 
   Future<void> disconnect() async {
     await _connectionSubscription?.cancel();
+
     _connectionSubscription = null;
     connectionState = null;
     connectedDeviceId = null;
+    services.clear();
+    isConnecting = false;
+    isDiscoveringServices = false;
+    errorMessage = null;
+
     notifyListeners();
   }
 
   String get connectionStatusText {
+    if (isConnecting) return 'Connecting';
+
     final state = connectionState?.connectionState;
 
     if (state == null) return 'Disconnected';

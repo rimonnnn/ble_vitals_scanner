@@ -1,6 +1,7 @@
 import 'package:ble_vitals_scanner/features/ble/provider/ble_provider.dart';
 import 'package:ble_vitals_scanner/screens/live_data_screen/live_data_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:provider/provider.dart';
 
 class DeviceDetailsScreen extends StatefulWidget {
@@ -57,9 +58,9 @@ class _DeviceDetailsScreenState extends State<DeviceDetailsScreen> {
 
                 const SizedBox(height: 6),
 
-                Text(widget.deviceId),
+                Text(widget.deviceId, style: const TextStyle(fontSize: 13)),
 
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
 
                 Text.rich(
                   TextSpan(
@@ -95,61 +96,46 @@ class _DeviceDetailsScreenState extends State<DeviceDetailsScreen> {
 
           const SizedBox(height: 24),
 
-          const SectionTitle(title: 'Services'),
+          const SectionTitle(title: 'Services & Characteristics'),
 
-          const ServiceTile(
-            title: 'Heart Rate Service',
-            uuid: '0000180D-0000-1000-8000-00805F9B34FB',
-          ),
-
-          const ServiceTile(
-            title: 'Device Information Service',
-            uuid: '0000180A-0000-1000-8000-00805F9B34FB',
-          ),
-
-          const SizedBox(height: 24),
-
-          const SectionTitle(title: 'Characteristics'),
-
-          CharacteristicTile(
-            title: 'Heart Rate Measurement',
-            uuid: '00002A37-0000-1000-8000-00805F9B34FB',
-            properties: 'Notify',
-            buttonText: 'Subscribe',
-            onPressed: bleProvider.connectionStatusText == 'Connected'
-                ? () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => LiveDataScreen(
-                          deviceName: widget.deviceName,
-                          deviceId: widget.deviceId,
-                        ),
-                      ),
-                    );
-                  }
-                : null,
-          ),
-
-          CharacteristicTile(
-            title: 'Body Sensor Location',
-            uuid: '00002A38-0000-1000-8000-00805F9B34FB',
-            properties: 'Read',
-            buttonText: 'Read',
-            onPressed: bleProvider.connectionStatusText == 'Connected'
-                ? () {}
-                : null,
-          ),
-
-          CharacteristicTile(
-            title: 'Battery Level',
-            uuid: '00002A19-0000-1000-8000-00805F9B34FB',
-            properties: 'Read, Notify',
-            buttonText: 'Read',
-            onPressed: bleProvider.connectionStatusText == 'Connected'
-                ? () {}
-                : null,
-          ),
+          if (bleProvider.connectionStatusText == 'Connecting')
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 20),
+              child: Center(
+                child: Column(
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 12),
+                    Text('Connecting to device...'),
+                  ],
+                ),
+              ),
+            )
+          else if (bleProvider.isDiscoveringServices)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 20),
+              child: Center(
+                child: Column(
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 12),
+                    Text('Discovering services...'),
+                  ],
+                ),
+              ),
+            )
+          else if (bleProvider.connectionStatusText != 'Connected')
+            const EmptyStateCard(message: 'Device is not connected yet.')
+          else if (bleProvider.services.isEmpty)
+            const EmptyStateCard(message: 'No services discovered.')
+          else
+            ...bleProvider.services.map((service) {
+              return ServiceWithCharacteristicsCard(
+                service: service,
+                deviceId: widget.deviceId,
+                deviceName: widget.deviceName,
+              );
+            }),
 
           const SizedBox(height: 24),
 
@@ -168,7 +154,7 @@ class _DeviceDetailsScreenState extends State<DeviceDetailsScreen> {
                 backgroundColor: Colors.red,
                 foregroundColor: Colors.white,
               ),
-              child: const Text('Disconnect'),
+              child: const Text('Disconnect', style: TextStyle(fontSize: 16)),
             ),
           ),
         ],
@@ -228,86 +214,206 @@ class SectionTitle extends StatelessWidget {
   }
 }
 
-class ServiceTile extends StatelessWidget {
-  final String title;
-  final String uuid;
+class EmptyStateCard extends StatelessWidget {
+  final String message;
 
-  const ServiceTile({super.key, required this.title, required this.uuid});
+  const EmptyStateCard({super.key, required this.message});
 
   @override
   Widget build(BuildContext context) {
     return Card(
       elevation: 0,
-      margin: const EdgeInsets.only(bottom: 10),
+      color: Colors.white,
       shape: RoundedRectangleBorder(
         side: BorderSide(color: Colors.grey.shade300),
         borderRadius: BorderRadius.circular(10),
       ),
-      child: ListTile(
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text('UUID: $uuid', style: const TextStyle(fontSize: 12)),
-        trailing: const Icon(Icons.chevron_right),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Text(message, style: const TextStyle(fontSize: 14)),
       ),
     );
   }
 }
 
-class CharacteristicTile extends StatelessWidget {
-  final String title;
-  final String uuid;
-  final String properties;
-  final String buttonText;
-  final VoidCallback? onPressed;
+class ServiceWithCharacteristicsCard extends StatelessWidget {
+  final DiscoveredService service;
+  final String deviceId;
+  final String deviceName;
 
-  const CharacteristicTile({
+  const ServiceWithCharacteristicsCard({
     super.key,
-    required this.title,
-    required this.uuid,
-    required this.properties,
-    required this.buttonText,
-    required this.onPressed,
+    required this.service,
+    required this.deviceId,
+    required this.deviceName,
   });
 
   @override
   Widget build(BuildContext context) {
+    final characteristics = service.characteristics;
+
     return Card(
       elevation: 0,
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 14),
+      color: Colors.white,
       shape: RoundedRectangleBorder(
         side: BorderSide(color: Colors.grey.shade300),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-
-                  const SizedBox(height: 6),
-
-                  Text('UUID: $uuid', style: const TextStyle(fontSize: 11)),
-
-                  const SizedBox(height: 4),
-
-                  Text(
-                    'Properties: $properties',
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                ],
-              ),
+            const Text(
+              'Service UUID',
+              style: TextStyle(fontWeight: FontWeight.bold),
             ),
 
-            OutlinedButton(onPressed: onPressed, child: Text(buttonText)),
+            const SizedBox(height: 6),
+
+            Text(
+              service.serviceId.toString(),
+              style: const TextStyle(fontSize: 12),
+            ),
+
+            const SizedBox(height: 14),
+
+            const Text(
+              'Characteristics',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+
+            const SizedBox(height: 8),
+
+            if (characteristics.isEmpty)
+              const Text('No characteristics found')
+            else
+              ...characteristics.map((characteristic) {
+                final canNotify = characteristic.isNotifiable;
+                final canRead = characteristic.isReadable;
+                final canOpen = canNotify || canRead;
+
+                return CharacteristicItem(
+                  characteristic: characteristic,
+                  canOpen: canOpen,
+                  buttonText: canNotify
+                      ? 'Subscribe'
+                      : canRead
+                      ? 'Read'
+                      : 'Unavailable',
+                  onPressed: canOpen
+                      ? () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => LiveDataScreen(
+                                deviceName: deviceName,
+                                deviceId: deviceId,
+                                serviceId: service.serviceId,
+                                characteristicId:
+                                    characteristic.characteristicId,
+                                isNotifiable: characteristic.isNotifiable,
+                              ),
+                            ),
+                          );
+                        }
+                      : null,
+                );
+              }),
           ],
         ),
       ),
     );
+  }
+}
+
+class CharacteristicItem extends StatelessWidget {
+  final DiscoveredCharacteristic characteristic;
+  final bool canOpen;
+  final String buttonText;
+  final VoidCallback? onPressed;
+
+  const CharacteristicItem({
+    super.key,
+    required this.characteristic,
+    required this.canOpen,
+    required this.buttonText,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Characteristic UUID',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+
+                const SizedBox(height: 4),
+
+                Text(
+                  characteristic.characteristicId.toString(),
+                  style: const TextStyle(fontSize: 11),
+                ),
+
+                const SizedBox(height: 4),
+
+                Text(
+                  'Properties: ${_getPropertiesText(characteristic)}',
+                  style: const TextStyle(fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(width: 8),
+
+          OutlinedButton(onPressed: onPressed, child: Text(buttonText)),
+        ],
+      ),
+    );
+  }
+
+  String _getPropertiesText(DiscoveredCharacteristic characteristic) {
+    final properties = <String>[];
+
+    if (characteristic.isReadable) {
+      properties.add('Read');
+    }
+
+    if (characteristic.isWritableWithResponse) {
+      properties.add('Write');
+    }
+
+    if (characteristic.isWritableWithoutResponse) {
+      properties.add('Write Without Response');
+    }
+
+    if (characteristic.isNotifiable) {
+      properties.add('Notify');
+    }
+
+    if (characteristic.isIndicatable) {
+      properties.add('Indicate');
+    }
+
+    if (properties.isEmpty) {
+      return 'Unknown';
+    }
+
+    return properties.join(', ');
   }
 }
