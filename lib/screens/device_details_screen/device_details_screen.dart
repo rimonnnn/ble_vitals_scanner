@@ -20,8 +20,9 @@ class DeviceDetailsScreen extends StatefulWidget {
 
 class _DeviceDetailsScreenState extends State<DeviceDetailsScreen> {
   late BleProvider _bleProvider;
+
   bool _startedConnection = false;
-  bool _manualDisconnect = false;
+  bool _isDisconnectingManually = false;
 
   @override
   void didChangeDependencies() {
@@ -39,7 +40,11 @@ class _DeviceDetailsScreenState extends State<DeviceDetailsScreen> {
   }
 
   Future<void> _disconnectAndGoToScan() async {
-    _manualDisconnect = true;
+    if (_isDisconnectingManually) return;
+
+    setState(() {
+      _isDisconnectingManually = true;
+    });
 
     await _bleProvider.disconnect();
 
@@ -49,125 +54,126 @@ class _DeviceDetailsScreenState extends State<DeviceDetailsScreen> {
   }
 
   @override
-  void dispose() {
-    if (!_manualDisconnect) {
-      _bleProvider.disconnect();
-    }
-
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final bleProvider = context.watch<BleProvider>();
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        title: const Text(
-          'Device Details',
-          style: TextStyle(fontWeight: FontWeight.bold),
+    final isDisconnecting =
+        _isDisconnectingManually ||
+        bleProvider.connectionStatusText == 'Disconnecting';
+
+    return WillPopScope(
+      onWillPop: () async {
+        await _bleProvider.disconnect();
+        return true;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          title: const Text(
+            'Device Details',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          actions: const [Icon(Icons.more_vert), SizedBox(width: 8)],
         ),
-        actions: const [Icon(Icons.more_vert), SizedBox(width: 8)],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          InfoCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.deviceName,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-
-                const SizedBox(height: 6),
-
-                Text(widget.deviceId, style: const TextStyle(fontSize: 13)),
-
-                const SizedBox(height: 8),
-
-                Text.rich(
-                  TextSpan(
-                    text: 'Status: ',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                    children: [
-                      TextSpan(
-                        text: bleProvider.connectionStatusText,
-                        style: TextStyle(
-                          color: _getStatusColor(
-                            bleProvider.connectionStatusText,
-                          ),
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                if (bleProvider.errorMessage != null) ...[
-                  const SizedBox(height: 8),
+        body: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            InfoCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Text(
-                    bleProvider.errorMessage!,
+                    widget.deviceName,
                     style: const TextStyle(
-                      color: Colors.red,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
+
+                  const SizedBox(height: 6),
+
+                  Text(widget.deviceId, style: const TextStyle(fontSize: 13)),
+
+                  const SizedBox(height: 8),
+
+                  Text.rich(
+                    TextSpan(
+                      text: 'Status: ',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      children: [
+                        TextSpan(
+                          text: isDisconnecting
+                              ? 'Disconnecting'
+                              : bleProvider.connectionStatusText,
+                          style: TextStyle(
+                            color: _getStatusColor(
+                              isDisconnecting
+                                  ? 'Disconnecting'
+                                  : bleProvider.connectionStatusText,
+                            ),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  if (bleProvider.errorMessage != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      bleProvider.errorMessage!,
+                      style: const TextStyle(
+                        color: Colors.red,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ],
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 24),
-
-          const SectionTitle(title: 'Services & Characteristics'),
-
-          if (bleProvider.connectionStatusText == 'Connecting')
-            const LoadingCard(message: 'Connecting to device...')
-          else if (bleProvider.connectionStatusText == 'Disconnecting')
-            const LoadingCard(message: 'Disconnecting...')
-          else if (bleProvider.isDiscoveringServices)
-            const LoadingCard(message: 'Discovering services...')
-          else if (bleProvider.connectionStatusText != 'Connected')
-            const EmptyStateCard(message: 'Device is not connected yet.')
-          else if (bleProvider.services.isEmpty)
-            const EmptyStateCard(message: 'No services discovered.')
-          else
-            ...bleProvider.services.map((service) {
-              return ServiceWithCharacteristicsCard(
-                service: service,
-                deviceId: widget.deviceId,
-                deviceName: widget.deviceName,
-              );
-            }),
-
-          const SizedBox(height: 24),
-
-          SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: ElevatedButton(
-              onPressed: bleProvider.connectionStatusText == 'Disconnecting'
-                  ? null
-                  : _disconnectAndGoToScan,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-              ),
-              child: Text(
-                bleProvider.connectionStatusText == 'Disconnecting'
-                    ? 'Disconnecting...'
-                    : 'Disconnect',
-                style: const TextStyle(fontSize: 16),
               ),
             ),
-          ),
-        ],
+
+            const SizedBox(height: 24),
+
+            const SectionTitle(title: 'Services & Characteristics'),
+
+            if (bleProvider.connectionStatusText == 'Connecting')
+              const LoadingCard(message: 'Connecting to device...')
+            else if (isDisconnecting)
+              const LoadingCard(message: 'Disconnecting...')
+            else if (bleProvider.isDiscoveringServices)
+              const LoadingCard(message: 'Discovering services...')
+            else if (bleProvider.connectionStatusText != 'Connected')
+              const EmptyStateCard(message: 'Device is not connected yet.')
+            else if (bleProvider.services.isEmpty)
+              const EmptyStateCard(message: 'No services discovered.')
+            else
+              ...bleProvider.services.map((service) {
+                return ServiceWithCharacteristicsCard(
+                  service: service,
+                  deviceId: widget.deviceId,
+                  deviceName: widget.deviceName,
+                );
+              }),
+
+            const SizedBox(height: 24),
+
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: isDisconnecting ? null : _disconnectAndGoToScan,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                ),
+                child: Text(
+                  isDisconnecting ? 'Disconnecting...' : 'Disconnect',
+                  style: const TextStyle(fontSize: 16),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
