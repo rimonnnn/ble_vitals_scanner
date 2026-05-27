@@ -227,10 +227,10 @@ Responsibilities:
 
 ### 1. Clone the repository
 
-    git clone https://github.com/YOUR_USERNAME/ble_vitals_scanner.git
+    git clone https://github.com/rimonnnn/ble_vitals_scanner.git
     cd ble_vitals_scanner
 
-Replace YOUR_USERNAME with your GitHub username.
+
 
 ### 2. Install dependencies
 
