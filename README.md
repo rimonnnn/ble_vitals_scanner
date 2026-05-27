@@ -1,8 +1,53 @@
 # BLE Vitals Scanner
 
-A Flutter application that scans nearby Bluetooth Low Energy (BLE) devices, connects to a selected device, discovers its services and characteristics, and displays live values from readable or notifiable characteristics.
+A Flutter application that scans nearby Bluetooth Low Energy (BLE) devices, connects to a selected device, discovers its available services and characteristics, and displays live values from readable or notifiable characteristics.
 
 This project was built as part of the Flutter Intern Assignment: BLE Vitals Scanner.
+
+---
+
+## Overview
+
+BLE Vitals Scanner focuses on the core BLE workflow:
+
+Scan nearby BLE devices, connect to a selected peripheral, discover GATT services and characteristics, then read or subscribe to characteristic values in real time.
+
+The application was intentionally designed with a simple and clean UI so the main focus remains on BLE logic, state handling, connection flow, and error handling.
+
+---
+
+## Screenshots
+
+<table>
+  <tr>
+    <td align="center">
+      <strong>Scan Screen</strong><br/>
+      <img src="assets/screenshots/scan_screen.png" width="220"/>
+    </td>
+    <td align="center">
+      <strong>Nearby Devices</strong><br/>
+      <img src="assets/screenshots/devices_list.png" width="220"/>
+    </td>
+    <td align="center">
+      <strong>Device Details</strong><br/>
+      <img src="assets/screenshots/device_details.png" width="220"/>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <strong>Services & Characteristics</strong><br/>
+      <img src="assets/screenshots/services_characteristics.png" width="220"/>
+    </td>
+    <td align="center">
+      <strong>Live Data</strong><br/>
+      <img src="assets/screenshots/live_data.png" width="220"/>
+    </td>
+    <td align="center">
+      <strong>Disconnect Flow</strong><br/>
+      <img src="assets/screenshots/disconnect_flow.png" width="220"/>
+    </td>
+  </tr>
+</table>
 
 ---
 
@@ -62,7 +107,7 @@ The app uses flutter_reactive_ble for:
 - Subscribing to characteristic notifications
 - Handling connection status updates
 
-No other BLE package is used.
+No other BLE package is used for BLE functionality.
 
 ---
 
@@ -94,9 +139,9 @@ No other BLE package is used.
 
 ## Architecture Overview
 
-The project uses a simple layered architecture.
+The project follows a simple layered architecture.
 
-### 1. Presentation Layer
+### Presentation Layer
 
 Responsible for UI screens and user interaction.
 
@@ -106,7 +151,7 @@ Screens:
 - DeviceDetailsScreen
 - LiveDataScreen
 
-### 2. State Management Layer
+### State Management Layer
 
 Implemented using Provider and ChangeNotifier.
 
@@ -124,7 +169,7 @@ Responsibilities:
 - Handle disconnect and reconnect flow
 - Expose error messages to the UI
 
-### 3. Data Layer
+### Data Layer
 
 Implemented in:
 
@@ -139,7 +184,7 @@ Responsibilities:
 - Read characteristics
 - Subscribe to characteristics
 
-### 4. Permission Layer
+### Permission Layer
 
 Implemented in:
 
@@ -270,34 +315,9 @@ The advertiser was configured as:
 
 ---
 
-## Screenshots
-
-Add screenshots inside:
-
-    assets/screenshots/
-
-Recommended screenshots:
-
-    1. Scan Screen
-    2. Nearby Devices List
-    3. Device Details Screen
-    4. Services and Characteristics
-    5. Live Data Screen
-    6. Disconnect / Return to Scan Flow
-
-Example Markdown format:
-
-    ![Scan Screen](assets/screenshots/scan_screen.jpg)
-    ![Device Details](assets/screenshots/device_details_screen.jpg)
-    ![Live Data](assets/screenshots/live_data_screen.jpg)
-    ![Nearby Devices Screen](assets/screenshots/nearby_devices_screen.jpg)
-    ![Desconnect Devices Screen](assets/screenshots/desconnect_screen.jpg)
-
----
-
 ## Main Screens
 
-### 1. Scan Screen
+### Scan Screen
 
 The scan screen allows the user to:
 
@@ -316,7 +336,7 @@ If a device has no name, it is displayed as:
 
     Unknown BLE Device
 
-### 2. Device Details Screen
+### Device Details Screen
 
 The device details screen displays:
 
@@ -329,7 +349,7 @@ The device details screen displays:
 
 The app automatically discovers services after a successful connection.
 
-### 3. Live Data Screen
+### Live Data Screen
 
 The live data screen displays:
 
@@ -345,7 +365,7 @@ The live data screen displays:
 
 ## Error Handling
 
-The app handles several BLE-related cases:
+The app handles several BLE-related cases.
 
 ### Permission Denied
 
@@ -379,7 +399,7 @@ If no characteristic data is received yet, the app shows:
 
 ## Issues Faced and Solutions
 
-### 1. Some BLE devices appear but do not connect
+### Some BLE devices appear but do not connect
 
 Some devices, such as commercial earbuds or unknown BLE advertisers, may appear during scanning but may not expose connectable GATT services to third-party apps.
 
@@ -390,7 +410,7 @@ Solution:
 - Prefer devices with strong RSSI values
 - Show timeout errors clearly in the UI
 
-### 2. Android BLE stack may delay disconnection
+### Android BLE stack may delay disconnection
 
 After disconnecting, reconnecting immediately may fail on some Android devices because the BLE stack needs a short time to release GATT resources.
 
@@ -402,7 +422,7 @@ Solution:
 - Added a short delay after disconnect
 - Disabled reconnect actions while disconnecting
 
-### 3. Some Android devices do not support advanced advertising
+### Some Android devices do not support advanced advertising
 
 Some phones do not support Extended Advertising or Periodic Advertising.
 
@@ -412,7 +432,7 @@ Solution:
 - Used Connectable Advertising
 - Added a standard GATT service and characteristic
 
-### 4. Devices may appear as Unknown
+### Devices may appear as Unknown
 
 Some BLE peripherals do not advertise a readable local name.
 
@@ -420,7 +440,7 @@ Solution:
 
 - Display fallback name:
 
-  Unknown BLE Device
+    Unknown BLE Device
 
 - Use RSSI and service filtering/testing to identify the correct device
 
@@ -466,13 +486,11 @@ To generate a release APK:
 
 The APK will be generated at:
 
-    build\app\outputs\flutter-apk\app-release.apk
+    build/app/outputs/flutter-apk/app-release.apk
 
 ---
 
 ## Demo Video
-
-https://drive.google.com/file/d/1WgZOzbLL3wd8ix5appcmPlHYK09AfwKq/view?usp=sharing
 
 The demo video should show:
 
