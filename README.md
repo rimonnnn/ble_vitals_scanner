@@ -34,7 +34,10 @@ The application was intentionally designed with a simple and clean UI so the mai
     </td>
   </tr>
   <tr>
-    
+    <td align="center">
+      <strong>Services & Characteristics</strong><br/>
+      <img src="assets/screenshots/live_data_screen.jpg" width="220"/>
+    </td>
     <td align="center">
       <strong>Live Data</strong><br/>
       <img src="assets/screenshots/live_data_screen.jpg" width="220"/>
