@@ -1,7 +1,9 @@
+import 'package:ble_vitals_scanner/features/ble/provider/ble_provider.dart';
 import 'package:ble_vitals_scanner/screens/live_data_screen/live_data_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-class DeviceDetailsScreen extends StatelessWidget {
+class DeviceDetailsScreen extends StatefulWidget {
   final String deviceName;
   final String deviceId;
 
@@ -12,7 +14,23 @@ class DeviceDetailsScreen extends StatelessWidget {
   });
 
   @override
+  State<DeviceDetailsScreen> createState() => _DeviceDetailsScreenState();
+}
+
+class _DeviceDetailsScreenState extends State<DeviceDetailsScreen> {
+  @override
+  void initState() {
+    super.initState();
+
+    Future.microtask(() {
+      context.read<BleProvider>().connectToDevice(widget.deviceId);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final bleProvider = context.watch<BleProvider>();
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -30,79 +48,147 @@ class DeviceDetailsScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  deviceName,
+                  widget.deviceName,
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
+
                 const SizedBox(height: 6),
-                Text(deviceId),
+
+                Text(widget.deviceId),
+
                 const SizedBox(height: 6),
-                const Text.rich(
+
+                Text.rich(
                   TextSpan(
                     text: 'Status: ',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                     children: [
                       TextSpan(
-                        text: 'Connected',
+                        text: bleProvider.connectionStatusText,
                         style: TextStyle(
-                          color: Colors.green,
+                          color: _getStatusColor(
+                            bleProvider.connectionStatusText,
+                          ),
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
                   ),
                 ),
+
+                if (bleProvider.errorMessage != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    bleProvider.errorMessage!,
+                    style: const TextStyle(
+                      color: Colors.red,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
+
           const SizedBox(height: 24),
+
           const SectionTitle(title: 'Services'),
+
           const ServiceTile(
             title: 'Heart Rate Service',
             uuid: '0000180D-0000-1000-8000-00805F9B34FB',
           ),
+
           const ServiceTile(
             title: 'Device Information Service',
             uuid: '0000180A-0000-1000-8000-00805F9B34FB',
           ),
+
           const SizedBox(height: 24),
+
           const SectionTitle(title: 'Characteristics'),
+
           CharacteristicTile(
             title: 'Heart Rate Measurement',
             uuid: '00002A37-0000-1000-8000-00805F9B34FB',
             properties: 'Notify',
             buttonText: 'Subscribe',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => LiveDataScreen(
-                    deviceName: deviceName,
-                    deviceId: deviceId,
-                  ),
-                ),
-              );
-            },
+            onPressed: bleProvider.connectionStatusText == 'Connected'
+                ? () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => LiveDataScreen(
+                          deviceName: widget.deviceName,
+                          deviceId: widget.deviceId,
+                        ),
+                      ),
+                    );
+                  }
+                : null,
           ),
+
           CharacteristicTile(
             title: 'Body Sensor Location',
             uuid: '00002A38-0000-1000-8000-00805F9B34FB',
             properties: 'Read',
             buttonText: 'Read',
-            onPressed: () {},
+            onPressed: bleProvider.connectionStatusText == 'Connected'
+                ? () {}
+                : null,
           ),
+
           CharacteristicTile(
             title: 'Battery Level',
             uuid: '00002A19-0000-1000-8000-00805F9B34FB',
             properties: 'Read, Notify',
             buttonText: 'Read',
-            onPressed: () {},
+            onPressed: bleProvider.connectionStatusText == 'Connected'
+                ? () {}
+                : null,
+          ),
+
+          const SizedBox(height: 24),
+
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton(
+              onPressed: () async {
+                await context.read<BleProvider>().disconnect();
+
+                if (!context.mounted) return;
+
+                Navigator.pop(context);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Disconnect'),
+            ),
           ),
         ],
       ),
     );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'Connected':
+        return Colors.green;
+      case 'Connecting':
+        return Colors.orange;
+      case 'Disconnecting':
+        return Colors.orange;
+      case 'Disconnected':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
   }
 }
 
@@ -171,7 +257,7 @@ class CharacteristicTile extends StatelessWidget {
   final String uuid;
   final String properties;
   final String buttonText;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
 
   const CharacteristicTile({
     super.key,
@@ -203,9 +289,13 @@ class CharacteristicTile extends StatelessWidget {
                     title,
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
+
                   const SizedBox(height: 6),
+
                   Text('UUID: $uuid', style: const TextStyle(fontSize: 11)),
+
                   const SizedBox(height: 4),
+
                   Text(
                     'Properties: $properties',
                     style: const TextStyle(fontSize: 12),
@@ -213,6 +303,7 @@ class CharacteristicTile extends StatelessWidget {
                 ],
               ),
             ),
+
             OutlinedButton(onPressed: onPressed, child: Text(buttonText)),
           ],
         ),

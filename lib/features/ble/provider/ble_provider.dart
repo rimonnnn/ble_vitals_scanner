@@ -9,12 +9,16 @@ import '../data/ble_repository.dart';
 class BleProvider extends ChangeNotifier {
   final BleRepository _bleRepository;
   final BlePermissionService _permissionService;
+  StreamSubscription<ConnectionStateUpdate>? _connectionSubscription;
+
+  ConnectionStateUpdate? connectionState;
+  String? connectedDeviceId;
 
   BleProvider({
     required BleRepository bleRepository,
     required BlePermissionService permissionService,
-  })  : _bleRepository = bleRepository,
-        _permissionService = permissionService;
+  }) : _bleRepository = bleRepository,
+       _permissionService = permissionService;
 
   StreamSubscription<DiscoveredDevice>? _scanSubscription;
 
@@ -69,9 +73,55 @@ class BleProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> connectToDevice(String deviceId) async {
+    errorMessage = null;
+    connectedDeviceId = deviceId;
+
+    await _connectionSubscription?.cancel();
+
+    _connectionSubscription = _bleRepository
+        .connectToDevice(deviceId)
+        .listen(
+          (update) {
+            connectionState = update;
+            notifyListeners();
+          },
+          onError: (error) {
+            errorMessage = 'Connection failed: $error';
+            notifyListeners();
+          },
+        );
+  }
+
+  Future<void> disconnect() async {
+    await _connectionSubscription?.cancel();
+    _connectionSubscription = null;
+    connectionState = null;
+    connectedDeviceId = null;
+    notifyListeners();
+  }
+
+  String get connectionStatusText {
+    final state = connectionState?.connectionState;
+
+    if (state == null) return 'Disconnected';
+
+    switch (state) {
+      case DeviceConnectionState.connecting:
+        return 'Connecting';
+      case DeviceConnectionState.connected:
+        return 'Connected';
+      case DeviceConnectionState.disconnecting:
+        return 'Disconnecting';
+      case DeviceConnectionState.disconnected:
+        return 'Disconnected';
+    }
+  }
+
   @override
   void dispose() {
     _scanSubscription?.cancel();
+    _connectionSubscription?.cancel();
     super.dispose();
   }
 }
