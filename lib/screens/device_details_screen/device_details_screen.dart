@@ -39,7 +39,10 @@ class _DeviceDetailsScreenState extends State<DeviceDetailsScreen> {
           'Device Details',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        actions: const [Icon(Icons.more_vert), SizedBox(width: 8)],
+        actions: const [
+          Icon(Icons.more_vert),
+          SizedBox(width: 8),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -58,7 +61,10 @@ class _DeviceDetailsScreenState extends State<DeviceDetailsScreen> {
 
                 const SizedBox(height: 6),
 
-                Text(widget.deviceId, style: const TextStyle(fontSize: 13)),
+                Text(
+                  widget.deviceId,
+                  style: const TextStyle(fontSize: 13),
+                ),
 
                 const SizedBox(height: 8),
 
@@ -99,43 +105,27 @@ class _DeviceDetailsScreenState extends State<DeviceDetailsScreen> {
           const SectionTitle(title: 'Services & Characteristics'),
 
           if (bleProvider.connectionStatusText == 'Connecting')
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 20),
-              child: Center(
-                child: Column(
-                  children: [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 12),
-                    Text('Connecting to device...'),
-                  ],
-                ),
-              ),
-            )
+            const LoadingCard(message: 'Connecting to device...')
           else if (bleProvider.isDiscoveringServices)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 20),
-              child: Center(
-                child: Column(
-                  children: [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 12),
-                    Text('Discovering services...'),
-                  ],
-                ),
-              ),
-            )
+            const LoadingCard(message: 'Discovering services...')
           else if (bleProvider.connectionStatusText != 'Connected')
-            const EmptyStateCard(message: 'Device is not connected yet.')
+            const EmptyStateCard(
+              message: 'Device is not connected yet.',
+            )
           else if (bleProvider.services.isEmpty)
-            const EmptyStateCard(message: 'No services discovered.')
+            const EmptyStateCard(
+              message: 'No services discovered.',
+            )
           else
-            ...bleProvider.services.map((service) {
-              return ServiceWithCharacteristicsCard(
-                service: service,
-                deviceId: widget.deviceId,
-                deviceName: widget.deviceName,
-              );
-            }),
+            ...bleProvider.services.map(
+              (service) {
+                return ServiceWithCharacteristicsCard(
+                  service: service,
+                  deviceId: widget.deviceId,
+                  deviceName: widget.deviceName,
+                );
+              },
+            ),
 
           const SizedBox(height: 24),
 
@@ -154,7 +144,10 @@ class _DeviceDetailsScreenState extends State<DeviceDetailsScreen> {
                 backgroundColor: Colors.red,
                 foregroundColor: Colors.white,
               ),
-              child: const Text('Disconnect', style: TextStyle(fontSize: 16)),
+              child: const Text(
+                'Disconnect',
+                style: TextStyle(fontSize: 16),
+              ),
             ),
           ),
         ],
@@ -181,43 +174,10 @@ class _DeviceDetailsScreenState extends State<DeviceDetailsScreen> {
 class InfoCard extends StatelessWidget {
   final Widget child;
 
-  const InfoCard({super.key, required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
-        side: BorderSide(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Padding(padding: const EdgeInsets.all(16), child: child),
-    );
-  }
-}
-
-class SectionTitle extends StatelessWidget {
-  final String title;
-
-  const SectionTitle({super.key, required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Text(
-        title,
-        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-      ),
-    );
-  }
-}
-
-class EmptyStateCard extends StatelessWidget {
-  final String message;
-
-  const EmptyStateCard({super.key, required this.message});
+  const InfoCard({
+    super.key,
+    required this.child,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -230,7 +190,94 @@ class EmptyStateCard extends StatelessWidget {
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Text(message, style: const TextStyle(fontSize: 14)),
+        child: child,
+      ),
+    );
+  }
+}
+
+class SectionTitle extends StatelessWidget {
+  final String title;
+
+  const SectionTitle({
+    super.key,
+    required this.title,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 17,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+}
+
+class LoadingCard extends StatelessWidget {
+  final String message;
+
+  const LoadingCard({
+    super.key,
+    required this.message,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        side: BorderSide(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          vertical: 24,
+          horizontal: 16,
+        ),
+        child: Center(
+          child: Column(
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 12),
+              Text(message),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class EmptyStateCard extends StatelessWidget {
+  final String message;
+
+  const EmptyStateCard({
+    super.key,
+    required this.message,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        side: BorderSide(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Text(
+          message,
+          style: const TextStyle(fontSize: 14),
+        ),
       ),
     );
   }
@@ -267,12 +314,14 @@ class ServiceWithCharacteristicsCard extends StatelessWidget {
           children: [
             const Text(
               'Service UUID',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
             ),
 
             const SizedBox(height: 6),
 
-            Text(
+            SelectableText(
               service.serviceId.toString(),
               style: const TextStyle(fontSize: 12),
             ),
@@ -281,7 +330,9 @@ class ServiceWithCharacteristicsCard extends StatelessWidget {
 
             const Text(
               'Characteristics',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
             ),
 
             const SizedBox(height: 8),
@@ -289,38 +340,39 @@ class ServiceWithCharacteristicsCard extends StatelessWidget {
             if (characteristics.isEmpty)
               const Text('No characteristics found')
             else
-              ...characteristics.map((characteristic) {
-                final canNotify = characteristic.isNotifiable;
-                final canRead = characteristic.isReadable;
-                final canOpen = canNotify || canRead;
+              ...characteristics.map(
+                (characteristic) {
+                  final canNotify = characteristic.isNotifiable;
+                  final canRead = characteristic.isReadable;
+                  final canOpen = canNotify || canRead;
 
-                return CharacteristicItem(
-                  characteristic: characteristic,
-                  canOpen: canOpen,
-                  buttonText: canNotify
-                      ? 'Subscribe'
-                      : canRead
-                      ? 'Read'
-                      : 'Unavailable',
-                  onPressed: canOpen
-                      ? () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => LiveDataScreen(
-                                deviceName: deviceName,
-                                deviceId: deviceId,
-                                serviceId: service.serviceId,
-                                characteristicId:
-                                    characteristic.characteristicId,
-                                isNotifiable: characteristic.isNotifiable,
+                  return CharacteristicItem(
+                    characteristic: characteristic,
+                    buttonText: canNotify
+                        ? 'Subscribe'
+                        : canRead
+                            ? 'Read'
+                            : 'Unavailable',
+                    onPressed: canOpen
+                        ? () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => LiveDataScreen(
+                                  deviceName: deviceName,
+                                  deviceId: deviceId,
+                                  serviceId: service.serviceId,
+                                  characteristicId:
+                                      characteristic.characteristicId,
+                                  isNotifiable: characteristic.isNotifiable,
+                                ),
                               ),
-                            ),
-                          );
-                        }
-                      : null,
-                );
-              }),
+                            );
+                          }
+                        : null,
+                  );
+                },
+              ),
           ],
         ),
       ),
@@ -330,14 +382,12 @@ class ServiceWithCharacteristicsCard extends StatelessWidget {
 
 class CharacteristicItem extends StatelessWidget {
   final DiscoveredCharacteristic characteristic;
-  final bool canOpen;
   final String buttonText;
   final VoidCallback? onPressed;
 
   const CharacteristicItem({
     super.key,
     required this.characteristic,
-    required this.canOpen,
     required this.buttonText,
     required this.onPressed,
   });
@@ -359,12 +409,14 @@ class CharacteristicItem extends StatelessWidget {
               children: [
                 const Text(
                   'Characteristic UUID',
-                  style: TextStyle(fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
 
                 const SizedBox(height: 4),
 
-                Text(
+                SelectableText(
                   characteristic.characteristicId.toString(),
                   style: const TextStyle(fontSize: 11),
                 ),
@@ -381,7 +433,10 @@ class CharacteristicItem extends StatelessWidget {
 
           const SizedBox(width: 8),
 
-          OutlinedButton(onPressed: onPressed, child: Text(buttonText)),
+          OutlinedButton(
+            onPressed: onPressed,
+            child: Text(buttonText),
+          ),
         ],
       ),
     );
