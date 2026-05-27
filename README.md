@@ -22,29 +22,29 @@ The application was intentionally designed with a simple and clean UI so the mai
   <tr>
     <td align="center">
       <strong>Scan Screen</strong><br/>
-      <img src="assets/screenshots/scan_screen.png" width="220"/>
+      <img src="assets/screenshots/scan_screen.jpg" width="220"/>
     </td>
     <td align="center">
       <strong>Nearby Devices</strong><br/>
-      <img src="assets/screenshots/devices_list.png" width="220"/>
+      <img src="assets/screenshots/devices_list.jpg" width="220"/>
     </td>
     <td align="center">
       <strong>Device Details</strong><br/>
-      <img src="assets/screenshots/device_details.png" width="220"/>
+      <img src="assets/screenshots/device_details.jpg" width="220"/>
     </td>
   </tr>
   <tr>
     <td align="center">
       <strong>Services & Characteristics</strong><br/>
-      <img src="assets/screenshots/services_characteristics.png" width="220"/>
+      <img src="assets/screenshots/services_characteristics.jpg" width="220"/>
     </td>
     <td align="center">
       <strong>Live Data</strong><br/>
-      <img src="assets/screenshots/live_data.png" width="220"/>
+      <img src="assets/screenshots/live_data.jpg" width="220"/>
     </td>
     <td align="center">
       <strong>Disconnect Flow</strong><br/>
-      <img src="assets/screenshots/disconnect_flow.png" width="220"/>
+      <img src="assets/screenshots/disconnect_flow.jpg" width="220"/>
     </td>
   </tr>
 </table>
