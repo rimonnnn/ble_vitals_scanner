@@ -287,9 +287,11 @@ Recommended screenshots:
 
 Example Markdown format:
 
-    ![Scan Screen](assets/screenshots/scan_screen.png)
-    ![Device Details](assets/screenshots/device_details.png)
-    ![Live Data](assets/screenshots/live_data.png)
+    ![Scan Screen](assets/screenshots/scan_screen.jpg)
+    ![Device Details](assets/screenshots/device_details_screen.jpg)
+    ![Live Data](assets/screenshots/live_data_screen.jpg)
+    ![Nearby Devices Screen](assets/screenshots/nearby_devices_screen.jpg)
+    ![Desconnect Devices Screen](assets/screenshots/desconnect_screen.jpg)
 
 ---
 
@@ -418,7 +420,7 @@ Solution:
 
 - Display fallback name:
 
-    Unknown BLE Device
+  Unknown BLE Device
 
 - Use RSSI and service filtering/testing to identify the correct device
 
@@ -469,7 +471,8 @@ The APK will be generated at:
 ---
 
 ## Demo Video
-   https://drive.google.com/file/d/1WgZOzbLL3wd8ix5appcmPlHYK09AfwKq/view?usp=sharing
+
+https://drive.google.com/file/d/1WgZOzbLL3wd8ix5appcmPlHYK09AfwKq/view?usp=sharing
 
 The demo video should show:
 
