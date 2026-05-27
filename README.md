@@ -478,15 +478,9 @@ With more time, the app could be improved by adding:
 
 ---
 
-## Build Release APK
+## APK
 
-To generate a release APK:
-
-    flutter build apk --release
-
-The APK will be generated at:
-
-    build/app/outputs/flutter-apk/app-release.apk
+https://drive.google.com/file/d/1qsVdY9Bz-ldr8cIHIRDougZ0FdOOKotH/view?usp=drive_link
 
 ---
 
