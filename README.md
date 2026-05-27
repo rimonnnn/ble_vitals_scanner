@@ -492,17 +492,7 @@ The APK will be generated at:
 
 ## Demo Video
 
-The demo video should show:
-
-    1. Opening the app
-    2. Starting BLE scan
-    3. Viewing nearby devices
-    4. Connecting to a selected device
-    5. Viewing connection status
-    6. Viewing services and characteristics
-    7. Reading or subscribing to a characteristic
-    8. Viewing live data
-    9. Disconnecting and returning to scan
+   https://drive.google.com/file/d/1WgZOzbLL3wd8ix5appcmPlHYK09AfwKq/view?usp=drive_link
 
 ---
 
