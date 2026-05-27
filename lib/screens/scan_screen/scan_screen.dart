@@ -11,12 +11,15 @@ class ScanScreen extends StatelessWidget {
     if (device.name.trim().isEmpty) {
       return 'Unknown Device';
     }
+
     return device.name;
   }
 
   @override
   Widget build(BuildContext context) {
     final bleProvider = context.watch<BleProvider>();
+
+    final isBusy = bleProvider.isConnecting || bleProvider.isDisconnecting;
 
     return Scaffold(
       appBar: AppBar(
@@ -30,15 +33,18 @@ class ScanScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text.rich(
+            Text.rich(
               TextSpan(
-                text: 'Bluetooth: ',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                text: 'Connection: ',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
                 children: [
                   TextSpan(
-                    text: 'ON',
+                    text: bleProvider.connectionStatusText,
                     style: TextStyle(
-                      color: Colors.green,
+                      color: _statusColor(bleProvider.connectionStatusText),
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -52,7 +58,9 @@ class ScanScreen extends StatelessWidget {
               width: double.infinity,
               height: 48,
               child: ElevatedButton(
-                onPressed: bleProvider.isScanning
+                onPressed: isBusy
+                    ? null
+                    : bleProvider.isScanning
                     ? bleProvider.stopScan
                     : bleProvider.startScan,
                 style: ElevatedButton.styleFrom(
@@ -62,7 +70,11 @@ class ScanScreen extends StatelessWidget {
                   foregroundColor: Colors.white,
                 ),
                 child: Text(
-                  bleProvider.isScanning ? 'Stop Scan' : 'Start Scan',
+                  isBusy
+                      ? bleProvider.connectionStatusText
+                      : bleProvider.isScanning
+                      ? 'Stop Scan'
+                      : 'Start Scan',
                 ),
               ),
             ),
@@ -118,6 +130,7 @@ class ScanScreen extends StatelessWidget {
                           name: _deviceName(device),
                           id: device.id,
                           rssi: '${device.rssi} dBm',
+                          isDisabled: isBusy,
                           onConnect: () async {
                             await bleProvider.stopScan();
 
@@ -142,12 +155,28 @@ class ScanScreen extends StatelessWidget {
       ),
     );
   }
+
+  Color _statusColor(String status) {
+    switch (status) {
+      case 'Connected':
+        return Colors.green;
+      case 'Connecting':
+        return Colors.orange;
+      case 'Disconnecting':
+        return Colors.orange;
+      case 'Disconnected':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
 }
 
 class DeviceCard extends StatelessWidget {
   final String name;
   final String id;
   final String rssi;
+  final bool isDisabled;
   final VoidCallback onConnect;
 
   const DeviceCard({
@@ -155,6 +184,7 @@ class DeviceCard extends StatelessWidget {
     required this.name,
     required this.id,
     required this.rssi,
+    required this.isDisabled,
     required this.onConnect,
   });
 
@@ -182,14 +212,22 @@ class DeviceCard extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
+
                   const SizedBox(height: 8),
+
                   Text(id, style: const TextStyle(fontSize: 13)),
+
                   const SizedBox(height: 6),
+
                   Text('RSSI: $rssi'),
                 ],
               ),
             ),
-            OutlinedButton(onPressed: onConnect, child: const Text('Connect')),
+
+            OutlinedButton(
+              onPressed: isDisabled ? null : onConnect,
+              child: const Text('Connect'),
+            ),
           ],
         ),
       ),

@@ -24,38 +24,68 @@ class LiveDataScreen extends StatefulWidget {
 }
 
 class _LiveDataScreenState extends State<LiveDataScreen> {
+  late BleProvider _bleProvider;
+
+  bool _started = false;
+  bool _isStreamStopped = false;
+  bool _manualDisconnect = false;
+
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
 
-    Future.microtask(() {
-      final provider = context.read<BleProvider>();
+    _bleProvider = context.read<BleProvider>();
 
-      if (widget.isNotifiable) {
-        provider.subscribeToCharacteristic(
-          deviceId: widget.deviceId,
-          serviceId: widget.serviceId,
-          characteristicId: widget.characteristicId,
-        );
-      } else {
-        provider.readCharacteristic(
-          deviceId: widget.deviceId,
-          serviceId: widget.serviceId,
-          characteristicId: widget.characteristicId,
-        );
-      }
+    if (!_started) {
+      _started = true;
+      _startLiveData();
+    }
+  }
+
+  void _startLiveData() {
+    setState(() {
+      _isStreamStopped = false;
     });
+
+    if (widget.isNotifiable) {
+      _bleProvider.subscribeToCharacteristic(
+        deviceId: widget.deviceId,
+        serviceId: widget.serviceId,
+        characteristicId: widget.characteristicId,
+      );
+    } else {
+      _bleProvider.readCharacteristic(
+        deviceId: widget.deviceId,
+        serviceId: widget.serviceId,
+        characteristicId: widget.characteristicId,
+      );
+    }
+  }
+
+  Future<void> _disconnectAndGoToScan() async {
+    _manualDisconnect = true;
+
+    await _bleProvider.disconnect();
+
+    if (!mounted) return;
+
+    Navigator.popUntil(context, (route) => route.isFirst);
   }
 
   @override
   void dispose() {
-    context.read<BleProvider>().stopLiveData();
+    if (!_manualDisconnect) {
+      _bleProvider.stopLiveData();
+    }
+
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final bleProvider = context.watch<BleProvider>();
+
+    final isDisconnecting = bleProvider.connectionStatusText == 'Disconnecting';
 
     return Scaffold(
       appBar: AppBar(
@@ -173,25 +203,41 @@ class _LiveDataScreenState extends State<LiveDataScreen> {
             width: double.infinity,
             height: 48,
             child: ElevatedButton(
-              onPressed: widget.isNotifiable
-                  ? () {
-                      context.read<BleProvider>().stopLiveData();
-                    }
-                  : () {
-                      context.read<BleProvider>().readCharacteristic(
-                        deviceId: widget.deviceId,
-                        serviceId: widget.serviceId,
-                        characteristicId: widget.characteristicId,
-                      );
-                    },
+              onPressed: isDisconnecting
+                  ? null
+                  : widget.isNotifiable
+                      ? () async {
+                          if (_isStreamStopped) {
+                            _startLiveData();
+                          } else {
+                            await _bleProvider.stopLiveData();
+
+                            if (!mounted) return;
+
+                            setState(() {
+                              _isStreamStopped = true;
+                            });
+                          }
+                        }
+                      : () {
+                          _bleProvider.readCharacteristic(
+                            deviceId: widget.deviceId,
+                            serviceId: widget.serviceId,
+                            characteristicId: widget.characteristicId,
+                          );
+                        },
               style: ElevatedButton.styleFrom(
                 backgroundColor: widget.isNotifiable
-                    ? Colors.orange
+                    ? (_isStreamStopped ? Colors.blue : Colors.orange)
                     : Colors.blue,
                 foregroundColor: Colors.white,
               ),
               child: Text(
-                widget.isNotifiable ? 'Stop Live Stream' : 'Read Again',
+                widget.isNotifiable
+                    ? (_isStreamStopped
+                        ? 'Restart Live Stream'
+                        : 'Stop Live Stream')
+                    : 'Read Again',
               ),
             ),
           ),
@@ -202,18 +248,15 @@ class _LiveDataScreenState extends State<LiveDataScreen> {
             width: double.infinity,
             height: 48,
             child: ElevatedButton(
-              onPressed: () async {
-                await context.read<BleProvider>().disconnect();
-
-                if (!context.mounted) return;
-
-                Navigator.popUntil(context, (route) => route.isFirst);
-              },
+              onPressed: isDisconnecting ? null : _disconnectAndGoToScan,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
                 foregroundColor: Colors.white,
               ),
-              child: const Text('Disconnect', style: TextStyle(fontSize: 16)),
+              child: Text(
+                isDisconnecting ? 'Disconnecting...' : 'Disconnect',
+                style: const TextStyle(fontSize: 16),
+              ),
             ),
           ),
         ],

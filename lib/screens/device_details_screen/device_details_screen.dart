@@ -19,13 +19,42 @@ class DeviceDetailsScreen extends StatefulWidget {
 }
 
 class _DeviceDetailsScreenState extends State<DeviceDetailsScreen> {
-  @override
-  void initState() {
-    super.initState();
+  late BleProvider _bleProvider;
+  bool _startedConnection = false;
+  bool _manualDisconnect = false;
 
-    Future.microtask(() {
-      context.read<BleProvider>().connectToDevice(widget.deviceId);
-    });
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    _bleProvider = context.read<BleProvider>();
+
+    if (!_startedConnection) {
+      _startedConnection = true;
+
+      Future.microtask(() {
+        _bleProvider.connectToDevice(widget.deviceId);
+      });
+    }
+  }
+
+  Future<void> _disconnectAndGoToScan() async {
+    _manualDisconnect = true;
+
+    await _bleProvider.disconnect();
+
+    if (!mounted) return;
+
+    Navigator.popUntil(context, (route) => route.isFirst);
+  }
+
+  @override
+  void dispose() {
+    if (!_manualDisconnect) {
+      _bleProvider.disconnect();
+    }
+
+    super.dispose();
   }
 
   @override
@@ -39,10 +68,7 @@ class _DeviceDetailsScreenState extends State<DeviceDetailsScreen> {
           'Device Details',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        actions: const [
-          Icon(Icons.more_vert),
-          SizedBox(width: 8),
-        ],
+        actions: const [Icon(Icons.more_vert), SizedBox(width: 8)],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -61,10 +87,7 @@ class _DeviceDetailsScreenState extends State<DeviceDetailsScreen> {
 
                 const SizedBox(height: 6),
 
-                Text(
-                  widget.deviceId,
-                  style: const TextStyle(fontSize: 13),
-                ),
+                Text(widget.deviceId, style: const TextStyle(fontSize: 13)),
 
                 const SizedBox(height: 8),
 
@@ -106,26 +129,22 @@ class _DeviceDetailsScreenState extends State<DeviceDetailsScreen> {
 
           if (bleProvider.connectionStatusText == 'Connecting')
             const LoadingCard(message: 'Connecting to device...')
+          else if (bleProvider.connectionStatusText == 'Disconnecting')
+            const LoadingCard(message: 'Disconnecting...')
           else if (bleProvider.isDiscoveringServices)
             const LoadingCard(message: 'Discovering services...')
           else if (bleProvider.connectionStatusText != 'Connected')
-            const EmptyStateCard(
-              message: 'Device is not connected yet.',
-            )
+            const EmptyStateCard(message: 'Device is not connected yet.')
           else if (bleProvider.services.isEmpty)
-            const EmptyStateCard(
-              message: 'No services discovered.',
-            )
+            const EmptyStateCard(message: 'No services discovered.')
           else
-            ...bleProvider.services.map(
-              (service) {
-                return ServiceWithCharacteristicsCard(
-                  service: service,
-                  deviceId: widget.deviceId,
-                  deviceName: widget.deviceName,
-                );
-              },
-            ),
+            ...bleProvider.services.map((service) {
+              return ServiceWithCharacteristicsCard(
+                service: service,
+                deviceId: widget.deviceId,
+                deviceName: widget.deviceName,
+              );
+            }),
 
           const SizedBox(height: 24),
 
@@ -133,20 +152,18 @@ class _DeviceDetailsScreenState extends State<DeviceDetailsScreen> {
             width: double.infinity,
             height: 48,
             child: ElevatedButton(
-              onPressed: () async {
-                await context.read<BleProvider>().disconnect();
-
-                if (!context.mounted) return;
-
-                Navigator.pop(context);
-              },
+              onPressed: bleProvider.connectionStatusText == 'Disconnecting'
+                  ? null
+                  : _disconnectAndGoToScan,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
                 foregroundColor: Colors.white,
               ),
-              child: const Text(
-                'Disconnect',
-                style: TextStyle(fontSize: 16),
+              child: Text(
+                bleProvider.connectionStatusText == 'Disconnecting'
+                    ? 'Disconnecting...'
+                    : 'Disconnect',
+                style: const TextStyle(fontSize: 16),
               ),
             ),
           ),
@@ -174,10 +191,7 @@ class _DeviceDetailsScreenState extends State<DeviceDetailsScreen> {
 class InfoCard extends StatelessWidget {
   final Widget child;
 
-  const InfoCard({
-    super.key,
-    required this.child,
-  });
+  const InfoCard({super.key, required this.child});
 
   @override
   Widget build(BuildContext context) {
@@ -188,10 +202,7 @@ class InfoCard extends StatelessWidget {
         side: BorderSide(color: Colors.grey.shade300),
         borderRadius: BorderRadius.circular(10),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: child,
-      ),
+      child: Padding(padding: const EdgeInsets.all(16), child: child),
     );
   }
 }
@@ -199,10 +210,7 @@ class InfoCard extends StatelessWidget {
 class SectionTitle extends StatelessWidget {
   final String title;
 
-  const SectionTitle({
-    super.key,
-    required this.title,
-  });
+  const SectionTitle({super.key, required this.title});
 
   @override
   Widget build(BuildContext context) {
@@ -210,10 +218,7 @@ class SectionTitle extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 10),
       child: Text(
         title,
-        style: const TextStyle(
-          fontSize: 17,
-          fontWeight: FontWeight.bold,
-        ),
+        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -222,10 +227,7 @@ class SectionTitle extends StatelessWidget {
 class LoadingCard extends StatelessWidget {
   final String message;
 
-  const LoadingCard({
-    super.key,
-    required this.message,
-  });
+  const LoadingCard({super.key, required this.message});
 
   @override
   Widget build(BuildContext context) {
@@ -237,10 +239,7 @@ class LoadingCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(
-          vertical: 24,
-          horizontal: 16,
-        ),
+        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
         child: Center(
           child: Column(
             children: [
@@ -258,10 +257,7 @@ class LoadingCard extends StatelessWidget {
 class EmptyStateCard extends StatelessWidget {
   final String message;
 
-  const EmptyStateCard({
-    super.key,
-    required this.message,
-  });
+  const EmptyStateCard({super.key, required this.message});
 
   @override
   Widget build(BuildContext context) {
@@ -274,10 +270,7 @@ class EmptyStateCard extends StatelessWidget {
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Text(
-          message,
-          style: const TextStyle(fontSize: 14),
-        ),
+        child: Text(message, style: const TextStyle(fontSize: 14)),
       ),
     );
   }
@@ -314,9 +307,7 @@ class ServiceWithCharacteristicsCard extends StatelessWidget {
           children: [
             const Text(
               'Service UUID',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontWeight: FontWeight.bold),
             ),
 
             const SizedBox(height: 6),
@@ -330,9 +321,7 @@ class ServiceWithCharacteristicsCard extends StatelessWidget {
 
             const Text(
               'Characteristics',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontWeight: FontWeight.bold),
             ),
 
             const SizedBox(height: 8),
@@ -340,39 +329,37 @@ class ServiceWithCharacteristicsCard extends StatelessWidget {
             if (characteristics.isEmpty)
               const Text('No characteristics found')
             else
-              ...characteristics.map(
-                (characteristic) {
-                  final canNotify = characteristic.isNotifiable;
-                  final canRead = characteristic.isReadable;
-                  final canOpen = canNotify || canRead;
+              ...characteristics.map((characteristic) {
+                final canNotify = characteristic.isNotifiable;
+                final canRead = characteristic.isReadable;
+                final canOpen = canNotify || canRead;
 
-                  return CharacteristicItem(
-                    characteristic: characteristic,
-                    buttonText: canNotify
-                        ? 'Subscribe'
-                        : canRead
-                            ? 'Read'
-                            : 'Unavailable',
-                    onPressed: canOpen
-                        ? () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => LiveDataScreen(
-                                  deviceName: deviceName,
-                                  deviceId: deviceId,
-                                  serviceId: service.serviceId,
-                                  characteristicId:
-                                      characteristic.characteristicId,
-                                  isNotifiable: characteristic.isNotifiable,
-                                ),
+                return CharacteristicItem(
+                  characteristic: characteristic,
+                  buttonText: canNotify
+                      ? 'Subscribe'
+                      : canRead
+                      ? 'Read'
+                      : 'Unavailable',
+                  onPressed: canOpen
+                      ? () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => LiveDataScreen(
+                                deviceName: deviceName,
+                                deviceId: deviceId,
+                                serviceId: service.serviceId,
+                                characteristicId:
+                                    characteristic.characteristicId,
+                                isNotifiable: characteristic.isNotifiable,
                               ),
-                            );
-                          }
-                        : null,
-                  );
-                },
-              ),
+                            ),
+                          );
+                        }
+                      : null,
+                );
+              }),
           ],
         ),
       ),
@@ -409,9 +396,7 @@ class CharacteristicItem extends StatelessWidget {
               children: [
                 const Text(
                   'Characteristic UUID',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.w600),
                 ),
 
                 const SizedBox(height: 4),
@@ -433,10 +418,7 @@ class CharacteristicItem extends StatelessWidget {
 
           const SizedBox(width: 8),
 
-          OutlinedButton(
-            onPressed: onPressed,
-            child: Text(buttonText),
-          ),
+          OutlinedButton(onPressed: onPressed, child: Text(buttonText)),
         ],
       ),
     );

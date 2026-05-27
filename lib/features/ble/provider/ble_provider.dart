@@ -19,6 +19,7 @@ class BleProvider extends ChangeNotifier {
   StreamSubscription<DiscoveredDevice>? _scanSubscription;
   StreamSubscription<ConnectionStateUpdate>? _connectionSubscription;
   StreamSubscription<List<int>>? _valueSubscription;
+  Timer? _connectionTimeoutTimer;
 
   final List<DiscoveredDevice> _devices = [];
 
@@ -31,6 +32,7 @@ class BleProvider extends ChangeNotifier {
 
   bool isScanning = false;
   bool isConnecting = false;
+  bool isDisconnecting = false;
   bool isDiscoveringServices = false;
   bool isSubscribing = false;
 
@@ -90,18 +92,63 @@ class BleProvider extends ChangeNotifier {
   }
 
   Future<void> connectToDevice(String deviceId) async {
+    if (isDisconnecting) {
+      errorMessage = 'Please wait until disconnection finishes';
+      notifyListeners();
+      return;
+    }
+
+    await _valueSubscription?.cancel();
+    await _connectionSubscription?.cancel();
+    _connectionTimeoutTimer?.cancel();
+
+    _valueSubscription = null;
+    _connectionSubscription = null;
+    _connectionTimeoutTimer = null;
+
+    await Future.delayed(const Duration(milliseconds: 800));
+
     errorMessage = null;
     connectedDeviceId = deviceId;
     services.clear();
     connectionState = null;
+
     isConnecting = true;
+    isDisconnecting = false;
     isDiscoveringServices = false;
+    isSubscribing = false;
+
     latestValue = null;
     liveValues.clear();
 
     notifyListeners();
 
-    await _connectionSubscription?.cancel();
+    _connectionTimeoutTimer = Timer(const Duration(seconds: 15), () async {
+      if (connectionState?.connectionState != DeviceConnectionState.connected) {
+        debugPrint('Manual connection timeout');
+
+        await _connectionSubscription?.cancel();
+
+        _connectionSubscription = null;
+        connectionState = null;
+        connectedDeviceId = null;
+
+        services.clear();
+        liveValues.clear();
+
+        latestValue = null;
+
+        isConnecting = false;
+        isDisconnecting = false;
+        isDiscoveringServices = false;
+        isSubscribing = false;
+
+        errorMessage =
+            'Connection timeout. Make sure the selected device is connectable.';
+
+        notifyListeners();
+      }
+    });
 
     _connectionSubscription = _bleRepository.connectToDevice(deviceId).listen(
       (update) async {
@@ -111,10 +158,17 @@ class BleProvider extends ChangeNotifier {
 
         if (update.connectionState == DeviceConnectionState.connecting) {
           isConnecting = true;
+          isDisconnecting = false;
+          notifyListeners();
+          return;
         }
 
         if (update.connectionState == DeviceConnectionState.connected) {
+          _connectionTimeoutTimer?.cancel();
+          _connectionTimeoutTimer = null;
+
           isConnecting = false;
+          isDisconnecting = false;
           errorMessage = null;
           notifyListeners();
 
@@ -124,34 +178,46 @@ class BleProvider extends ChangeNotifier {
 
         if (update.connectionState == DeviceConnectionState.disconnecting) {
           isConnecting = false;
+          isDisconnecting = true;
+          notifyListeners();
+          return;
         }
 
         if (update.connectionState == DeviceConnectionState.disconnected) {
+          _connectionTimeoutTimer?.cancel();
+          _connectionTimeoutTimer = null;
+
           isConnecting = false;
+          isDisconnecting = false;
           isDiscoveringServices = false;
           isSubscribing = false;
+
           services.clear();
           latestValue = null;
           liveValues.clear();
 
-          if (connectedDeviceId == deviceId) {
-            errorMessage ??= 'Device disconnected';
-          }
+          notifyListeners();
+          return;
         }
-
-        notifyListeners();
       },
       onError: (error) {
+        _connectionTimeoutTimer?.cancel();
+        _connectionTimeoutTimer = null;
+
         debugPrint('BLE connection error: $error');
 
         isConnecting = false;
+        isDisconnecting = false;
         isDiscoveringServices = false;
         isSubscribing = false;
+
         services.clear();
         liveValues.clear();
+
         latestValue = null;
         connectedDeviceId = null;
         connectionState = null;
+
         errorMessage = 'Connection failed: $error';
 
         notifyListeners();
@@ -206,31 +272,31 @@ class BleProvider extends ChangeNotifier {
             characteristicId: characteristicId,
           )
           .listen(
-        (data) {
-          debugPrint('Received BLE data: $data');
+            (data) {
+              debugPrint('Received BLE data: $data');
 
-          final parsedValue = _parseBleValue(data);
-          latestValue = parsedValue;
+              final parsedValue = _parseBleValue(data);
+              latestValue = parsedValue;
 
-          final timestamp = _formatTime(DateTime.now());
-          liveValues.insert(0, '$timestamp  →  $parsedValue');
+              final timestamp = _formatTime(DateTime.now());
+              liveValues.insert(0, '$timestamp  →  $parsedValue');
 
-          if (liveValues.length > 20) {
-            liveValues.removeLast();
-          }
+              if (liveValues.length > 20) {
+                liveValues.removeLast();
+              }
 
-          isSubscribing = false;
-          notifyListeners();
-        },
-        onError: (error) {
-          debugPrint('Subscription error: $error');
+              isSubscribing = false;
+              notifyListeners();
+            },
+            onError: (error) {
+              debugPrint('Subscription error: $error');
 
-          isSubscribing = false;
-          errorMessage = 'Subscription failed: $error';
-          notifyListeners();
-        },
-        cancelOnError: false,
-      );
+              isSubscribing = false;
+              errorMessage = 'Subscription failed: $error';
+              notifyListeners();
+            },
+            cancelOnError: false,
+          );
     } catch (error) {
       debugPrint('Subscribe failed: $error');
 
@@ -283,16 +349,32 @@ class BleProvider extends ChangeNotifier {
   Future<void> stopLiveData() async {
     await _valueSubscription?.cancel();
     _valueSubscription = null;
+
     isSubscribing = false;
+    errorMessage = null;
+
     notifyListeners();
   }
 
   Future<void> disconnect() async {
-    await _valueSubscription?.cancel();
-    await _connectionSubscription?.cancel();
+    isDisconnecting = true;
+    isConnecting = false;
+    isDiscoveringServices = false;
+    isSubscribing = false;
+    errorMessage = null;
 
+    notifyListeners();
+
+    _connectionTimeoutTimer?.cancel();
+    _connectionTimeoutTimer = null;
+
+    await _valueSubscription?.cancel();
     _valueSubscription = null;
+
+    await _connectionSubscription?.cancel();
     _connectionSubscription = null;
+
+    await Future.delayed(const Duration(milliseconds: 1200));
 
     connectionState = null;
     connectedDeviceId = null;
@@ -302,6 +384,7 @@ class BleProvider extends ChangeNotifier {
 
     latestValue = null;
 
+    isDisconnecting = false;
     isConnecting = false;
     isDiscoveringServices = false;
     isSubscribing = false;
@@ -312,6 +395,7 @@ class BleProvider extends ChangeNotifier {
   }
 
   String get connectionStatusText {
+    if (isDisconnecting) return 'Disconnecting';
     if (isConnecting) return 'Connecting';
 
     final state = connectionState?.connectionState;
@@ -361,6 +445,7 @@ class BleProvider extends ChangeNotifier {
     _scanSubscription?.cancel();
     _connectionSubscription?.cancel();
     _valueSubscription?.cancel();
+    _connectionTimeoutTimer?.cancel();
     super.dispose();
   }
 }
